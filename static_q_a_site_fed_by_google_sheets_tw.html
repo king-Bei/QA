@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#eef2ff" />
+  <title>美樂家大堡礁郵輪 Q&A｜Google 試算表驅動(響應式)</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;600;700&display=swap" rel="stylesheet">
+  <!-- Markdown Renderer -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <style>
+    html { font-family: "Noto Sans TC", system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji"; }
+    .answer a { text-decoration: underline; word-break: break-word; color: inherit; }
+    details[open] summary .chev { transform: rotate(180deg); }
+    .faq-card { transition: box-shadow .2s ease, transform .06s ease; }
+    .faq-card:active { transform: translateY(1px); }
+    .faq-card[open]{ border-color:#bae6fd; box-shadow:0 8px 24px rgba(2,132,199,.08);} 
+    /* 行動裝置 chips row */
+    .chip-row { overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: thin; }
+    .chip-row::-webkit-scrollbar { height: 6px; }
+    .chip-row::-webkit-scrollbar-thumb { background: #c7d2fe; border-radius: 9999px; }
+    code.inline { background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 4px; padding: 0 .25rem; }
+  </style>
+</head>
+<body class="min-h-screen bg-slate-50">
+  <!-- Header -->
+  <header class="sticky top-0 z-20 bg-white/90 backdrop-blur border-b border-slate-200 supports-[padding:max(0px,env(safe-area-inset-top))]:pt-[env(safe-area-inset-top)]">
+    <div class="max-w-6xl mx-auto px-3 sm:px-4 py-3 sm:py-4 flex items-center gap-3">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6 text-indigo-600"><path d="M11.7 2.3a1 1 0 0 1 1.6 0l8 10a1 1 0 0 1-.8 1.7H3.5a1 1 0 0 1-.8-1.7l9-10Z"/><path d="M4 19a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4H4v4Z"/></svg>
+      <h1 class="text-lg sm:text-2xl font-bold tracking-tight text-slate-800">Q&A 知識庫</h1>
+      <span id="badgeCount" class="ml-auto text-xs rounded-full bg-indigo-100 text-indigo-700 px-2 py-1">0 筆</span>
+    </div>
+  </header>
+
+  <main class="max-w-6xl mx-auto px-3 sm:px-4 py-4 sm:py-6">
+    <!-- Controls(響應式表單) -->
+    <section class="grid grid-cols-1 md:grid-cols-12 gap-2 sm:gap-3 md:gap-4 mb-3 sm:mb-4">
+      <div class="md:col-span-6 lg:col-span-7">
+        <label class="block text-xs sm:text-sm text-slate-600 mb-1" for="search">關鍵字搜尋</label>
+        <input id="search" type="search" inputmode="search" autocomplete="off" placeholder="輸入關鍵字搜尋問題與答案…" class="w-full rounded-2xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 px-4 py-3 sm:py-2.5 bg-white shadow-sm text-[16px]" />
+      </div>
+      <div class="md:col-span-3 lg:col-span-3">
+        <label class="block text-xs sm:text-sm text-slate-600 mb-1" for="category">類別</label>
+        <select id="category" class="w-full rounded-2xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 px-4 py-3 sm:py-2.5 bg-white shadow-sm text-[16px]">
+          <option value="">全部類別</option>
+        </select>
+      </div>
+      <div class="md:col-span-3 lg:col-span-2 flex items-end gap-2">
+        <button id="btnClear" class="w-full rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-3 sm:py-2.5">清除</button>
+      </div>
+    </section>
+
+    <!-- Quick Category Chips(手機好滑動) -->
+    <div id="chipRow" class="chip-row -mx-3 sm:mx-0 mb-3 sm:mb-4">
+      <div id="chips" class="px-3 sm:px-0 flex gap-2 min-w-full"></div>
+    </div>
+
+    <!-- Toolbar：展開/收合 + 視圖切換 -->
+    <div class="flex flex-wrap items-center gap-2 mb-3 sm:mb-4">
+      <div class="flex items-center gap-2">
+        <button id="btnExpandAll" class="rounded-full border border-sky-200 bg-sky-50 text-sky-700 text-sm px-3 py-2 active:scale-[.99]">展開全部</button>
+        <button id="btnCollapseAll" class="rounded-full border border-slate-200 bg-white text-slate-700 text-sm px-3 py-2 active:scale-[.99]">全部收合</button>
+      </div>
+      <div class="ml-auto flex items-center gap-2">
+        <button id="btnRefresh" class="rounded-full border border-emerald-200 bg-emerald-50 text-emerald-700 text-sm px-3 py-2 active:scale-[.99]">同步最新資料</button>
+        <span class="hidden sm:inline text-xs text-slate-500">檢視：</span>
+        <button id="btnModeCategory" class="rounded-full border border-sky-200 bg-sky-50 text-sky-700 text-sm px-3 py-2 active:scale-[.99]">分類視圖</button>
+        <button id="btnModeFlat" class="rounded-full border border-slate-200 bg-white text-slate-700 text-sm px-3 py-2 active:scale-[.99]">全列表</button>
+      </div>
+    </div>
+
+    <!-- FAQ List -->
+    <section id="faqList" class="space-y-2 sm:space-y-3"></section>
+
+    <!-- Footer / Diagnostics -->
+    <footer class="mt-10 text-center text-xs text-slate-500">
+      <p>資料來源：Google 試算表(已發佈為網頁或開放知道連結者可檢視)</p>
+      <p class="mt-1">本頁為純靜態前端、響應式設計，無需伺服器程式。</p>
+      <div class="grid sm:grid-cols-2 gap-3 mt-4 text-left">
+        <details class="rounded-lg border border-slate-200 bg-white p-3">
+          <summary class="cursor-pointer text-slate-700">診斷/自我檢查(點我展開)</summary>
+          <pre id="testResults" class="mt-2 whitespace-pre-wrap text-xs"></pre>
+        </details>
+        <details class="rounded-lg border border-amber-200 bg-amber-50 p-3">
+          <summary class="cursor-pointer text-amber-800">即時偵錯資訊(只讀)</summary>
+          <div class="mt-2 space-y-1 text-amber-800 text-[11px]">
+            <div><span class="font-semibold">Fetch URL：</span><code id="diagUrl" class="inline"></code></div>
+            <div><span class="font-semibold">HTTP 狀態：</span><code id="diagStatus" class="inline"></code></div>
+            <div><span class="font-semibold">Content-Type：</span><code id="diagType" class="inline"></code></div>
+            <div><span class="font-semibold">段行模式：</span><code id="diagBreaks" class="inline"></code></div>
+            <div><span class="font-semibold">回應片段：</span>
+              <pre id="diagSnippet" class="mt-1 whitespace-pre-wrap"></pre>
+            </div>
+            <div class="mt-2">
+              <p class="font-semibold mb-1">若不是 JSON，常見原因：</p>
+              <ul class="list-disc pl-5 space-y-1">
+                <li>試算表未設為「知道連結者可檢視」或未「發佈到網路」。</li>
+                <li><code class="inline">SHEET_NAME</code> 不存在(分頁名稱錯字)。</li>
+                <li><code class="inline">SHEET_ID</code> 錯誤或文件被移動/權限收回。</li>
+              </ul>
+            </div>
+          </div>
+        </details>
+      </div>
+    </footer>
+  </main>
+
+  <script>
+    // ======== 1) 試算表設定 ========
+    const SHEET_ID   = "107TkubApIqz7dbitAOThSgjPzbHDZfNSxEO2W2spQe0"; // 你的試算表 ID
+    const SHEET_NAME = "Public"; // 建議用 Public 分頁只輸出 類別/問題/答案 三欄(或改成數字 gid)
+
+    // 標題對應(支援同義詞)
+    const HEADER_MAP = {
+      category: ["類別", "大分類", "分類", "Category"],
+      question: ["問題", "Question", "題目"],
+      answer:   ["答案", "Answer", "解答", "內容"]
+    };
+
+    // 答案是否啟用 Markdown 解析
+    const RENDER_MARKDOWN = true;
+    // 自動刷新(毫秒); 0 = 關閉。預設 10 分鐘(600000 ms)
+    const AUTO_REFRESH_MS = 600000;
+    // 是否預設展開第一個分類(僅在「分類視圖」)
+    const OPEN_FIRST_CATEGORY = true;
+
+    // ======== 2) App 狀態 ========
+    const state = {
+      all: [],
+      filtered: [],
+      category: "",
+      q: "",
+      modeSingleOpen: true,
+      viewMode: 'category'
+    };
+
+    // 讓 Markdown 將單一換行視為 <br>(符合方案 1)
+    if (window.marked && marked.setOptions) {
+      marked.setOptions({ gfm: true, breaks: true });
+    }
+    // 顯示目前段行設定狀態
+    setTimeout(setBreaksDiag, 0);
+
+    document.addEventListener('DOMContentLoaded', init);
+
+    async function init() {
+      try {
+        const url = buildGvizUrlBySheet(SHEET_ID, SHEET_NAME);
+        const rows = await fetchGvizRows(url);
+        const { headerIndex, data } = normalizeRows(rows);
+        const faq = mapToFaq(data, headerIndex);
+        state.all = faq.filter(x => x.question && x.answerText);
+        hydrateCategories(state.all);
+        render(state.all);
+        bindUI();
+        applyHashOpen();
+      } catch (err) {
+        console.error(err);
+        showError('讀取試算表失敗，請確認是否已發佈為網頁、ID/名稱是否正確。');
+      }
+      runSelfTests();
+    }
+
+    // ======== 3) UI 綁定 ========
+    function bindUI() {
+      const search = document.getElementById('search');
+      const category = document.getElementById('category');
+      const btnClear = document.getElementById('btnClear');
+      const btnExpandAll = document.getElementById('btnExpandAll');
+      const btnCollapseAll = document.getElementById('btnCollapseAll');
+      const btnModeCategory = document.getElementById('btnModeCategory');
+      const btnModeFlat = document.getElementById('btnModeFlat');
+      const btnRefresh = document.getElementById('btnRefresh');
+
+      const runFilter = debounce(() => applyFilter(), 120);
+
+      search.addEventListener('input', () => { state.q = search.value.trim(); runFilter(); });
+      category.addEventListener('change', () => { state.category = category.value; applyFilter(); });
+      btnClear.addEventListener('click', () => {
+        search.value = ""; category.value = ""; state.q = ""; state.category = ""; applyFilter();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      });
+
+      btnExpandAll.addEventListener('click', () => { state.modeSingleOpen = false; expandAll(); });
+      btnCollapseAll.addEventListener('click', () => { collapseAll(); state.modeSingleOpen = true; });
+
+      btnModeCategory.addEventListener('click', () => { state.viewMode = 'category'; applyFilter(); updateModeButtons(); });
+      btnModeFlat.addEventListener('click', () => { state.viewMode = 'flat'; applyFilter(); updateModeButtons(); });
+
+      updateModeButtons();
+
+      if (btnRefresh) btnRefresh.addEventListener('click', () => { refetch(); });
+
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') refetch();
+      });
+
+      if (AUTO_REFRESH_MS > 0) setInterval(refetch, AUTO_REFRESH_MS);
+    }
+
+    function updateModeButtons() {
+      const on = el => { el.className = 'rounded-full border border-sky-200 bg-sky-50 text-sky-700 text-sm px-3 py-2'; el.setAttribute('aria-pressed','true'); };
+      const off = el => { el.className = 'rounded-full border border-slate-200 bg-white text-slate-700 text-sm px-3 py-2'; el.setAttribute('aria-pressed','false'); };
+      const btnModeCategory = document.getElementById('btnModeCategory');
+      const btnModeFlat = document.getElementById('btnModeFlat');
+      if (state.viewMode === 'category') { on(btnModeCategory); off(btnModeFlat); }
+      else { on(btnModeFlat); off(btnModeCategory); }
+    }
+
+    // ======== 4) 篩選與渲染 ========
+    function applyFilter() {
+      const q = state.q.toLowerCase();
+      const cat = state.category;
+      state.filtered = state.all.filter(item => {
+        const inCat = !cat || item.category === cat;
+        if (!q) return inCat;
+        return inCat && (item.question.toLowerCase().includes(q) || item.answerText.toLowerCase().includes(q));
+      });
+      render(state.filtered.length ? state.filtered : state.all);
+    }
+
+    function hydrateCategories(items) {
+      const cats = Array.from(new Set(items.map(x => x.category).filter(Boolean))).sort((a,b)=>a.localeCompare(b,'zh-Hant'));
+      const sel = document.getElementById('category');
+      const chipWrap = document.getElementById('chips');
+      chipWrap.innerHTML = '';
+
+      for (const c of cats) {
+        const opt = document.createElement('option'); opt.value = c; opt.textContent = c; sel.appendChild(opt);
+        const chip = document.createElement('button');
+        chip.className = 'shrink-0 rounded-full border border-indigo-200 bg-indigo-50 text-indigo-700 text-sm px-3 py-2 active:scale-[.99]';
+        chip.textContent = c;
+        chip.addEventListener('click', () => {
+          state.category = c; sel.value = c; applyFilter();
+          document.getElementById('faqList').scrollIntoView({behavior: 'smooth', block: 'start'});
+        });
+        chipWrap.appendChild(chip);
+      }
+
+      if (cats.length) {
+        const anyBtn = document.createElement('button');
+        anyBtn.className = 'shrink-0 rounded-full border border-slate-200 bg-white text-slate-700 text-sm px-3 py-2';
+        anyBtn.textContent = '全部';
+        anyBtn.addEventListener('click', () => {
+          state.category = ''; sel.value = ''; applyFilter();
+          document.getElementById('faqList').scrollIntoView({behavior: 'smooth', block: 'start'});
+        });
+        chipWrap.prepend(anyBtn);
+      }
+    }
+
+    function render(list) {
+      const wrap = document.getElementById('faqList');
+      wrap.innerHTML = '';
+
+      const byCat = groupBy(list, x => x.category || '未分類');
+
+      if (state.viewMode === 'category') {
+        for (const [cat, items] of byCat) {
+          const catBox = document.createElement('details');
+          catBox.className = 'catcard rounded-2xl bg-white border border-slate-200 shadow-sm mb-2';
+          catBox.setAttribute('data-kind','cat');
+          if (OPEN_FIRST_CATEGORY && wrap.children.length === 0) catBox.open = true;
+          catBox.innerHTML = `
+            <summary class="list-none cursor-pointer select-none px-4 py-3 flex items-center gap-2 hover:bg-slate-50">
+              <span class="text-slate-800 font-semibold">${escapeHtml(cat)}</span>
+              <span class="text-[10px] rounded bg-slate-200 text-slate-700 px-1.5 py-0.5">${items.length}</span>
+            </summary>
+            <div class="px-2 sm:px-3 pb-3 space-y-2"></div>`;
+
+          const inner = catBox.querySelector('div');
+          for (const item of items) {
+            const id = slug(`${cat}-${item.question}`).slice(0, 64);
+            const content = normalizeEols(item.answerText);
+            const answerHtml = RENDER_MARKDOWN ? marked.parse(content) : `<p>${escapeHtml(content).replace(/\n/g,'<br>')}</p>`;
+
+            const el = document.createElement('details');
+            el.id = id;
+            el.setAttribute('data-kind','q');
+            el.className = 'faq-card rounded-xl bg-white border border-slate-200';
+            el.innerHTML = `
+              <summary class="list-none cursor-pointer select-none px-4 py-3 flex items-start gap-2 active:opacity-90 hover:bg-sky-50">
+                <svg class="chev mt-0.5 w-5 h-5 text-sky-500 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                <h3 class="text-sky-600 font-semibold leading-snug text-[16px] sm:text-base">${escapeHtml(item.question)}</h3>
+              </summary>
+              <div class="answer px-4 sm:px-5 pb-4 text-black leading-7 prose prose-sm sm:prose max-w-none">
+                ${answerHtml}
+                <div class="mt-3 flex items-center gap-2 text-xs text-slate-400">
+                  <button class="copylink hover:underline active:opacity-80" data-id="${id}">複製連結</button>
+                  ${item.category ? `<span>｜</span><span>${escapeHtml(item.category)}</span>` : ''}
+                </div>
+              </div>`;
+
+            el.addEventListener('toggle', () => {
+              if (state.modeSingleOpen && window.matchMedia('(max-width: 640px)').matches && el.open) {
+                catBox.querySelectorAll('details[data-kind="q"][open]').forEach(d => { if (d !== el) d.open = false; });
+              }
+            });
+
+            inner.appendChild(el);
+          }
+
+          wrap.appendChild(catBox);
+        }
+      } else {
+        for (const [cat, items] of byCat) {
+          const section = document.createElement('section');
+          section.className = 'mt-1 sm:mt-2';
+          section.innerHTML = `
+            <div class="flex items-center gap-2 mb-1 sm:mb-2">
+              <span class="text-sm font-semibold text-slate-700">${escapeHtml(cat)}</span>
+              <span class="text-[10px] rounded bg-slate-200 text-slate-700 px-1.5 py-0.5">${items.length}</span>
+            </div>`;
+
+          for (const item of items) {
+            const id = slug(`${cat}-${item.question}`).slice(0, 64);
+            const content = normalizeEols(item.answerText);
+            const answerHtml = RENDER_MARKDOWN ? marked.parse(content) : `<p>${escapeHtml(content).replace(/\n/g,'<br>')}</p>`;
+
+            const el = document.createElement('details');
+            el.id = id;
+            el.setAttribute('data-kind','q');
+            el.className = 'faq-card rounded-2xl bg-white border border-slate-200 shadow-sm';
+            el.innerHTML = `
+              <summary class="list-none cursor-pointer select-none px-4 py-3 sm:py-3 flex items-start gap-2 active:opacity-90 hover:bg-sky-50">
+                <svg class="chev mt-0.5 w-5 h-5 text-sky-500 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                <h3 class="text-sky-600 font-semibold leading-snug text-[16px] sm:text-base">${escapeHtml(item.question)}</h3>
+              </summary>
+              <div class="answer px-4 sm:px-5 pb-4 text-black leading-7 prose prose-sm sm:prose max-w-none">
+                ${answerHtml}
+                <div class="mt-3 flex items-center gap-2 text-xs text-slate-400">
+                  <button class="copylink hover:underline active:opacity-80" data-id="${id}">複製連結</button>
+                  ${item.category ? `<span>｜</span><span>${escapeHtml(item.category)}</span>` : ''}
+                </div>
+              </div>`;
+
+            el.addEventListener('toggle', () => {
+              if (state.modeSingleOpen && window.matchMedia('(max-width: 640px)').matches && el.open) {
+                document.querySelectorAll('#faqList details[data-kind="q"][open]').forEach(d => { if (d !== el) d.open = false; });
+              }
+            });
+
+            section.appendChild(el);
+          }
+          wrap.appendChild(section);
+        }
+      }
+
+      document.getElementById('badgeCount').textContent = `${list.length} 筆`;
+
+      wrap.querySelectorAll('.copylink').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const id = e.currentTarget.getAttribute('data-id');
+          const url = new URL(location.href); url.hash = id;
+          navigator.clipboard.writeText(url.toString());
+          e.currentTarget.textContent = '連結已複製！';
+          setTimeout(()=> e.currentTarget.textContent = '複製連結', 1600);
+        });
+      });
+    }
+
+    // ======== 4.5) 重新抓資料(手動/自動) ========
+    async function refetch() {
+      try {
+        const url = buildGvizUrlBySheet(SHEET_ID, SHEET_NAME, true);
+        const rows = await fetchGvizRows(url);
+        const { headerIndex, data } = normalizeRows(rows);
+        const faq = mapToFaq(data, headerIndex);
+        state.all = faq.filter(x => x.question && x.answerText);
+        applyFilter();
+      } catch (e) {
+        console.error('refetch failed', e);
+      }
+    }
+
+    // ======== 5) 工具函式 ========
+    function groupBy(arr, keyFn) {
+      const map = new Map();
+      for (const item of arr) { const k = keyFn(item); if (!map.has(k)) map.set(k, []); map.get(k).push(item); }
+      return map;
+    }
+
+    function debounce(fn, wait = 150) { let t; return (...args) => { clearTimeout(t); t = setTimeout(() => fn.apply(null, args), wait); }; }
+
+    function expandAll() { document.querySelectorAll('#faqList details').forEach(d => { d.open = true; }); }
+    function collapseAll() { document.querySelectorAll('#faqList details').forEach(d => { d.open = false; }); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+
+    function slug(s) {
+      return s.toString().normalize('NFKD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^\w\-一-龥]/g, '-')
+        .replace(/-{2,}/g, '-')
+        .replace(/^-+|-+$/g, '')
+        .toLowerCase();
+    }
+
+    function escapeHtml(str = '') {
+      return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\"/g,'&quot;').replace(/'/g,'&#039;');
+    }
+
+    // 正規化 CRLF/CR 為 \n(符合方案 2)
+    function normalizeEols(s = '') { return String(s).replace(/\r\n?/g, '\n'); }
+
+    // 顯示段行設定狀態到診斷面板
+    function setBreaksDiag() {
+      const el = document.getElementById('diagBreaks');
+      if (!el) return;
+      const md = (typeof marked !== 'undefined' && marked && marked.getDefaults ? (marked.getDefaults().breaks ? 'on' : 'off') : 'on');
+      el.textContent = `Markdown breaks:${md} / normalizeEols:on`;
+    }
+
+    function showError(msg) {
+      const wrap = document.getElementById('faqList');
+      wrap.innerHTML = `<div class="rounded-xl bg-red-50 border border-red-200 text-red-700 px-4 py-3">${escapeHtml(msg)}</div>`;
+    }
+
+    function applyHashOpen() {
+      if (!location.hash) return;
+      const id = location.hash.slice(1);
+      const qEl = document.getElementById(id);
+      if (!qEl) return;
+      const catEl = qEl.closest('details[data-kind="cat"]');
+      if (catEl) catEl.open = true;
+      qEl.open = true;
+      qEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    // ======== 6) Google Visualization API 讀取 ========
+    function buildGvizUrlBySheet(sheetId, sheetName, bust = false) {
+      const base = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq`;
+      const params = new URLSearchParams({ tqx: 'out:json' });
+      // 支援以名稱或 gid 指定分頁
+      if (/^\d+$/.test(String(sheetName))) params.set('gid', String(sheetName));
+      else params.set('sheet', sheetName);
+      if (bust) params.set('_', Date.now());
+      return `${base}?${params.toString()}`;
+    }
+
+    function parseGvizOrThrow(text) {
+      // 更健壯: 以字串定位法擷取括號內容, 避免正則對非 JSON 字元誤判
+      const marker = 'setResponse(';
+      const idx = text.indexOf(marker);
+      if (idx === -1) {
+        const err = new Error('非 gviz 回應: 可能是 HTML 錯誤頁或權限被擋');
+        err.code = 'E_NOT_GVIZ';
+        err.raw = text;
+        return { error: err };
+      }
+      const start = idx + marker.length;
+      const end = text.lastIndexOf(')');
+      if (end <= start) {
+        const err = new Error('gviz 回應格式不完整');
+        err.code = 'E_INCOMPLETE';
+        err.raw = text;
+        return { error: err };
+      }
+      const json = text.slice(start, end);
+      try {
+        const obj = JSON.parse(json);
+        return { data: obj };
+      } catch (e) {
+        const err = new Error('gviz JSON 解析失敗');
+        err.code = 'E_PARSE_JSON';
+        err.cause = e;
+        err.raw = json;
+        return { error: err };
+      }
+    }
+
+    function ensureGvizOk(obj) {
+      if (obj && typeof obj === 'object' && 'status' in obj && obj.status !== 'ok') {
+        const errMsg = (obj.errors && obj.errors[0] && (obj.errors[0].detailed_message || obj.errors[0].message)) || '未知錯誤';
+        const e = new Error('GViz 狀態不是 ok: ' + errMsg);
+        e.code = 'E_STATUS';
+        throw e;
+      }
+    }
+
+    async function fetchGvizRows(url) {
+      let res, text;
+      try {
+        res = await fetch(url, { cache: 'no-store' });
+      } catch (netErr) {
+        showDiagnostics(url, 0, 'network-error', String(netErr));
+        throw netErr;
+      }
+
+      const type = res.headers.get('content-type') || '';
+      text = await res.text();
+      const { data, error } = parseGvizOrThrow(text);
+
+      // 顯示診斷資訊(成功或失敗都記)
+      showDiagnostics(url, res.status, type, text);
+
+      if (error) {
+        if (error.code === 'E_NOT_GVIZ') {
+          const hint = '回應不像 gviz JSON, 請檢查: 1) 是否發佈到網路; 2) 連結權限; 3) SHEET_NAME 是否正確。';
+          throw new Error(hint);
+        }
+        if (error.code === 'E_PARSE_JSON') {
+          throw new Error('取得資料但解析失敗, 可能是欄位或內容格式異常。');
+        }
+        throw error;
+      }
+
+      // 額外檢查 GViz status
+      ensureGvizOk(data);
+
+      const table = data.table;
+      const rows = table.rows.map(r => r.c ? r.c.map(c => c ? c.v : '') : []);
+      const headers = table.cols.map(c => c.label || c.id || '');
+      return [headers, ...rows];
+    }
+
+    function showDiagnostics(url, status, type, body) {
+      const t = (x) => (x==null?'' : String(x));
+      const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = t(val); };
+      set('diagUrl', url);
+      set('diagStatus', status);
+      set('diagType', type);
+      const snippet = (body || '').slice(0, 400).replace(/\s+/g, ' ').trim();
+      set('diagSnippet', snippet);
+    }
+
+    function normalizeRows(rows) {
+      if (!rows || !rows.length) return { headerIndex: {}, data: [] };
+      const [header, ...data] = rows;
+      const headerIndex = {};
+      headerIndex.category = findHeaderIndex(header, HEADER_MAP.category);
+      headerIndex.question = findHeaderIndex(header, HEADER_MAP.question);
+      headerIndex.answer   = findHeaderIndex(header, HEADER_MAP.answer);
+      return { headerIndex, data };
+    }
+
+    function findHeaderIndex(headerRow, aliases) {
+      const lower = headerRow.map(h => String(h).trim().toLowerCase());
+      for (const name of aliases) {
+        const i = lower.indexOf(String(name).trim().toLowerCase());
+        if (i >= 0) return i;
+      }
+      return -1;
+    }
+
+    function mapToFaq(data, headerIndex) {
+      return data.map(row => {
+        const cat = pick(row, headerIndex.category, 0);
+        const q   = pick(row, headerIndex.question, 1);
+        const a   = pick(row, headerIndex.answer,  2);
+        return { category: String(cat||'').trim(), question: String(q||'').trim(), answerText: String(a||'').trim() };
+      });
+    }
+
+    function pick(row, idx, fallbackIdx) { if (idx >= 0 && idx < row.length) return row[idx]; if (fallbackIdx >= 0 && fallbackIdx < row.length) return row[fallbackIdx]; return ''; }
+
+    // ======== 7) 內建測試(不影響正式功能) ========
+    function runSelfTests() {
+      const out = [];
+      const ok = (name) => out.push(`✅ ${name}`);
+      const fail = (name, e) => out.push(`❌ ${name}: ${e && e.message ? e.message : e}`);
+
+      try {
+        // Test 1: URL 建構(無 bust)
+        const url1 = buildGvizUrlBySheet('SHEETID', '工作表1');
+        if (!/^https:\/\/docs\.google\.com\/spreadsheets\/d\/SHEETID\/gviz\/tq\?/.test(url1)) throw new Error('URL base 不正確');
+        if (!/tqx=out%3Ajson/.test(url1) || !/sheet=%E5%B7%A5%E4%BD%9C%E8%A1%A81/.test(url1)) throw new Error('查詢參數缺失');
+        ok('URL 建構(無 bust)');
+      } catch (e) { fail('URL 建構(無 bust)', e); }
+
+      try {
+        // Test 2: URL 建構(有 bust)
+        const url2 = buildGvizUrlBySheet('SHEETID', 'S', true);
+        const u = new URL(url2);
+        if (!u.searchParams.get('_')) throw new Error('未附加 bust 參數');
+        ok('URL 建構(有 bust)');
+      } catch (e) { fail('URL 建構(有 bust)', e); }
+
+      try {
+        // Test 2.1: gid 模式(數字視為 gid)
+        const url3 = buildGvizUrlBySheet('SHEETID', 0);
+        if (!/gid=0/.test(url3)) throw new Error('gid 參數應存在');
+        ok('URL 建構(gid 模式)');
+      } catch (e) { fail('URL 建構(gid 模式)', e); }
+
+      try {
+        // Test 3: gviz 回應剝殼與 JSON 解析(使用新 parser)
+        const mock = '\ufeff/*O_o*/google.visualization.Query.setResponse({"table":{"cols":[{"label":"類別"},{"label":"問題"},{"label":"答案"}],"rows":[{"c":[{"v":"A"},{"v":"Q1"},{"v":"A1"}]},{"c":[{"v":"B"},{"v":"Q2"},{"v":"A2"}]}]},"status":"ok"});  // trailing note';
+        const { data, error } = parseGvizOrThrow(mock);
+        if (error || !data || !data.table || data.table.rows.length !== 2) throw new Error('解析筆數錯誤');
+        ok('gviz 剝殼與 JSON 解析(parser)');
+      } catch (e) { fail('gviz 剝殼與 JSON 解析(parser)', e); }
+
+      try {
+        // Test 4: 標頭比對 & mapToFaq
+        const headers = ['類別','問題','答案'];
+        const rows = [headers, ['A','Q1','A1'], ['B','Q2','A2']];
+        const { headerIndex, data } = normalizeRows(rows);
+        const faq = mapToFaq(data, headerIndex);
+        if (faq.length !== 2 || faq[0].category !== 'A' || faq[1].question !== 'Q2') throw new Error('mapToFaq 結果不正確');
+        ok('標頭比對 & mapToFaq');
+      } catch (e) { fail('標頭比對 & mapToFaq', e); }
+
+      try {
+        // Test 5: slug 中文與符號
+        const s = slug('分類-問題 Q&A 測試！');
+        if (!/^[\w\-一-龥]+$/.test(s.replace(/-/g,''))) throw new Error('slug 轉換包含非法字元');
+        ok('slug 轉換');
+      } catch (e) { fail('slug 轉換', e); }
+
+      try {
+        // Test 6: HTML 錯誤頁(應回報非 gviz)
+        const html = '<!doctype html><html><body>Not Found</body></html>';
+        const { error } = parseGvizOrThrow(html);
+        if (!error || error.code !== 'E_NOT_GVIZ') throw new Error('未偵測到非 gviz 回應');
+        ok('HTML 回應偵測');
+      } catch (e) { fail('HTML 回應偵測', e); }
+
+      try {
+        // Test 7: 非法 JSON 片段(應回報解析失敗)
+        const broken = '/*O_o*/google.visualization.Query.setResponse({not-json});';
+        const { error } = parseGvizOrThrow(broken);
+        if (!error || error.code !== 'E_PARSE_JSON') throw new Error('未偵測到 JSON 解析失敗');
+        ok('JSON 解析失敗偵測');
+      } catch (e) { fail('JSON 解析失敗偵測', e); }
+
+      try {
+        // Test 8: 斜線開頭內容(模擬某些代理返回的字元)不應進行 JSON.parse
+        const slashLeading = '/html error page';
+        const { error } = parseGvizOrThrow(slashLeading);
+        if (!error || error.code !== 'E_NOT_GVIZ') throw new Error('未攔截斜線開頭的非 gviz 回應');
+        ok('斜線開頭非 gviz 攔截');
+      } catch (e) { fail('斜線開頭非 gviz 攔截', e); }
+
+      try {
+        // Test 9: build URL with sheet name Public(英文字)
+        const u = buildGvizUrlBySheet('ABC', 'Public');
+        if (!/sheet=Public/.test(u)) throw new Error('應使用 sheet=Public');
+        ok('URL 使用 sheet 參數(Public)');
+      } catch (e) { fail('URL 使用 sheet 參數(Public)', e); }
+
+      try {
+        // Test 10: GViz 狀態錯誤偵測
+        const bad = '/*O_o*/google.visualization.Query.setResponse({"status":"error","errors":[{"message":"Invalid sheet","detailed_message":"Worksheet not found"}]});';
+        const { data } = parseGvizOrThrow(bad);
+        let thrown = false;
+        try { ensureGvizOk(data); } catch (e) { thrown = true; }
+        if (!thrown) throw new Error('未正確偵測狀態錯誤');
+        ok('GViz 狀態錯誤偵測');
+      } catch (e) { fail('GViz 狀態錯誤偵測', e); }
+
+      try {
+        // Test 11: 換行正規化(CRLF/CR -> \n)
+        const t = normalizeEols('a\r\nb\rc\nd');
+        if (/\r/.test(t) || !/^a\nb\nc\nd$/.test(t)) throw new Error('換行符正規化失敗');
+        ok('換行正規化(normalizeEols)');
+      } catch (e) { fail('換行正規化(normalizeEols)', e); }
+
+      try {
+        // Test 12: Markdown 單一換行 -> <br>
+        if (window.marked) {
+          const html = marked.parse('第一行\n第二行');
+          if (!/(<br\s*\/\?\s*>)/i.test(html) && !/(<br\s*\/?\s*>)/i.test(html)) throw new Error('未將單一換行轉為 <br>');
+          ok('Markdown 單一換行轉 <br>');
+        } else {
+          ok('跳過: marked 不可用(CDN 失敗)');
+        }
+      } catch (e) { fail('Markdown 單一換行轉 <br>', e); }
+
+      try {
+        // Test 13: 內容含全形括號/非 ASCII 字元時仍可正常處理
+        const content = '這是一段文字(半形) 與 全形：ＡＢＣａｂｃ（）【】';
+        const html = marked.parse(normalizeEols(content));
+        if (!html || typeof html !== 'string') throw new Error('含全形字元的內容解析失敗');
+        ok('全形字元內容解析');
+      } catch (e) { fail('全形字元內容解析', e); }
+
+      const el = document.getElementById('testResults');
+      if (el) el.textContent = out.join('\n');
+      console.log('[SelfTests]', '\n' + out.join('\n'));
+    }
+  </script>
+
+  <!--
+  ========= 建立 Public 分頁(只公開三欄) =========
+  在同一份試算表新增分頁「Public」，A1:C1 請輸入標題：A1=類別  B1=問題  C1=答案
+
+  ◉ 若「問題」分頁剛好 A=類別/B=問題/C=答案：
+    在 Public!A2 貼上：
+    =ARRAYFORMULA(QUERY(問題!A:C, "select A,B,C where B is not null", 1))
+
+  ◉ 若欄位順序或標題不同(自動找欄位)：
+    在 Public!A2 貼上：
+    =ARRAYFORMULA(QUERY({
+      INDEX(問題!A:Z,0,IFERROR(MATCH("類別",問題!1:1,0),IFERROR(MATCH("大分類",問題!1:1,0),IFERROR(MATCH("分類",問題!1:1,0),MATCH("Category",問題!1:1,0)))));
+      INDEX(問題!A:Z,0,IFERROR(MATCH("問題",問題!1:1,0),IFERROR(MATCH("Question",問題!1:1,0),MATCH("題目",問題!1:1,0))));
+      INDEX(問題!A:Z,0,IFERROR(MATCH("答案",問題!1:1,0),IFERROR(MATCH("Answer",問題!1:1,0),MATCH("解答",問題!1:1,0))))},
+      "where Col2 is not null", 0))
+
+  完成後，本頁程式會以 SHEET_NAME = "Public" 讀取，僅公開三欄資料。
+  記得把試算表設為「知道連結的人可檢視」或發佈到網路。
+  -->
+</body>
+</html>
